@@ -44,24 +44,28 @@ Open a psql shell in the running DB container (macOS / Linux):
 ```bash
 docker compose exec db psql -U anshul -d anshul
 ```
+## Key Design Decisions
 
-KEY DESIGN DECISIONS:
+### Short URL Generation Flow
+1. **Validate & parse** input long URL
+2. **Idempotency check** — find existing short code for this URL
+3. **Insert long URL** into DB, get auto-increment ID
+4. **Generate random base62 code** (configurable length, default 10 chars)
+5. **Check uniqueness** — retry on collision (up to 5 times)
+6. **Update DB row** with final short code
+7. **Return** short code to client
 
-├─ SHORT URL GENERATION FLOW:
-│  ├─ Step 1: Validate & parse input long URL
-│  ├─ Step 2: Idempotency check (find existing short code for this URL)
-│  ├─ Step 3: Insert long URL into DB, get auto-increment ID
-│  ├─ Step 4: Generate random base62 code (configurable length, default 10 chars)
-│  ├─ Step 5: Check uniqueness; retry on collision (up to 5 times)
-│  ├─ Step 6: Update DB row with final short code
-│  └─ Return: Short code to client
-│
-│  Design Choice: Random codes (not sequential)
-│  ├─ Pro: Non-predictable, harder to enumerate URLs
-│  └─ Con: Risk of collisions (mitigated by retry loop)
-│
-├─ Rate Limiting: 20 request per minutes configurable
-│
-├─ Auth, Caching, Analytics: Not implemented
-│
-└─ Deployment: Docker Compose 
+**Design Choice: Random codes (not sequential)**
+- **Pro:** Non-predictable, harder to enumerate URLs
+- **Con:** Risk of collisions (mitigated by retry loop)
+
+### Rate Limiting
+- 20 requests per minute (configurable)
+
+### Not Implemented
+- Authentication
+- Caching
+- Analytics
+
+### Deployment
+- Docker Compose 
