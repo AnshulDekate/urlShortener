@@ -1,30 +1,67 @@
--------------------------------------------
-Setup: 
+# URL Shortener
 
-git clone github.com/AnshulDekate/urlShortener.git
+## Setup
+
+Clone and start the project:
+
+```bash
+git clone https://github.com/AnshulDekate/urlShortener.git
+cd urlShortener
 go mod tidy
-docker-compose up --build
+docker compose up --build
+```
 
--------------------------------------------
-Curls to test: 
+The service listens on port 8080 by default.
 
-HEALTCHECK
+## Endpoints / Example curls
+
+Healthcheck:
+
+```bash
 curl --location 'http://127.0.0.1:8080/healthcheck'
+```
 
-SHORTEN_URL
+Shorten a URL:
+
+```bash
 curl --location 'http://127.0.0.1:8080/shorten' \
---header 'Content-Type: application/json' \
---data '{
+  --header 'Content-Type: application/json' \
+  --data '{
     "long_url": "https://poltora.dev/rust-vs-go-memory/"
-}'
+  }'
+```
 
-PAGINATION
+List shortened URLs (pagination):
+
+```bash
 curl --location 'http://127.0.0.1:8080/urls?page=1&limit=5'
---------------------------------------------
+```
 
-To inspect the db directly:
+## Inspect the database
+
+Open a psql shell in the running DB container (macOS / Linux):
+
+```bash
 docker compose exec db psql -U anshul -d anshul
+```
 
+KEY DESIGN DECISIONS:
 
-
-
+├─ SHORT URL GENERATION FLOW:
+│  ├─ Step 1: Validate & parse input long URL
+│  ├─ Step 2: Idempotency check (find existing short code for this URL)
+│  ├─ Step 3: Insert long URL into DB, get auto-increment ID
+│  ├─ Step 4: Generate random base62 code (configurable length, default 10 chars)
+│  ├─ Step 5: Check uniqueness; retry on collision (up to 5 times)
+│  ├─ Step 6: Update DB row with final short code
+│  └─ Return: Short code to client
+│
+│  Design Choice: Random codes (not sequential)
+│  ├─ Pro: Non-predictable, harder to enumerate URLs
+│  └─ Con: Risk of collisions (mitigated by retry loop)
+│
+├─ Rate Limiting: 20 request per minutes configurable
+│
+├─ Auth, Caching, Analytics: Not implemented
+│
+└─ Deployment: Docker Compose 
