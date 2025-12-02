@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os" 
+	"os"
 	"time"
 	"github.com/gin-gonic/gin"
 
@@ -69,6 +69,11 @@ func main() {
 	}
 	defer db.Close()
 
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+
 	if err := waitForDB(db, 10, 1*time.Second); err != nil {
 		log.Fatalf("Fatal: Database not available: %v", err)
 	}
@@ -81,18 +86,18 @@ func main() {
 
 	repo := &repository.Repository{DB: db}
 	svc := &service.Service{Repo: repo}
-	h := handler.NewGinHandler(svc, shortURLDomain) 
+	h := handler.NewGinHandler(svc, shortURLDomain)
 
 	log.Println("Setting up HTTP handlers with Gin...")
-	
+
 	r := gin.New()
-	r.Use(gin.Recovery())      
-	r.Use(gin.Logger())       
-	r.Use(middleware.RateLimiterMiddleware()) 
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
+	r.Use(middleware.RateLimiterMiddleware())
 
 	r.POST("/shorten", h.Shorten)
 	r.GET("/healthcheck", h.HealthCheck)
-	r.GET("/:code", h.Redirect) 
+	r.GET("/:code", h.Redirect)
 	r.GET("/urls", h.ListURLs)
 
 	log.Printf("Gin server starting on %s...", listenAddr)

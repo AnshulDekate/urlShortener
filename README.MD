@@ -69,3 +69,10 @@ docker compose exec db psql -U anshul -d anshul
 
 ### Deployment
 - Docker Compose 
+
+### Scaling
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+  (can add cache also)
